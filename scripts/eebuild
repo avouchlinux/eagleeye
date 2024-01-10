@@ -1316,13 +1316,17 @@ getsrc(){
       # get the repo
       repo=$(echo $url | sed 's/.*:://' | sed 's/.*+//' | sed 's/#.*//')
       # get if need to checkout
-      checkout=$(echo $url | sed 's/.*#//')
-
+      checkout=$(echo $url | sed 's/.*#//' | sed 's/.*=//' | sed 's/?.*//')
+	  
       if [ "$vcs" == "git" ]; then
-        $vcs clone $repo
+	  	if [ ! -d "$pkgname" ]; then
+        	$vcs clone $repo
+		else 
+			message "$(gettext "Directory already exists. Skipping git clone ...")"
+		fi
         pushd $pkgname
           if [ -n "$checkout" ]; then
-            git checkout $_commit
+            git checkout $checkout
           fi
         popd
       fi
