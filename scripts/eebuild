@@ -180,7 +180,7 @@ fi
 	CHOST="x86_64-pc-linux-gnu"
 
 	# COMPILER MAKE FLAG
-	MAKEFLAGS="-j$(/usr/bin/getconf _NPROCESSORS_ONLN)"
+	# MAKEFLAGS="-j$(/usr/bin/getconf _NPROCESSORS_ONLN)"
 
 	# Compiler and Linker Flags
 	# -march (or -mcpu) builds exclusively for an architecture
@@ -252,7 +252,8 @@ fi
 	#########################################################################
 
 	## select the directory to install package
-	pkgdir="/pkg"
+	# pkgdir="/pkg"
+	pkgdir=$(mktemp -d)	
 
 	## select the build directory
 	builddir="/build"
@@ -308,7 +309,7 @@ TIMEZONE="$(date +%Z)"
 
 ## make flags
 #MAKEFLAGS="-j $(grep --count processor /proc/cpuinfo)"
-MAKEFLAGS="${MAKEFLAGS} -j$(nproc)"
+MAKE_EXTRA_FLAGS="${MAKEFLAGS} -j$(nproc)"
 
 
 
@@ -588,6 +589,9 @@ copy_srcbundledir(){
         # remove all text before slashes and compare it with called package.
         # if true copy the srcbundle directory else continue.
         if [[ $( echo $dir | sed 's/.*\///') == ${1} ]]; then
+			if [ -f "${builddir}/${1}/${1}.avhb" ]; then
+				rm "${builddir}/${1}/${1}.avhb"
+			fi
             message "$(gettext "Package source found at : $dir")"
             cp -a "${dir}" "${builddir}/"
             break
@@ -599,6 +603,15 @@ copy_srcbundledir(){
     # check for source directory
     if [ -f "$srcdir/${1}.avhb" ]; then
         message "Source directory is : ${srcdir}"
+		if [ -n ${MAKEFLAGS} ]; then
+			sed -i "s:makedepends:ma1kedepends:g" "$srcdir/${1}.avhb"
+			sed -i "s:cmake:cm1ake:g" "$srcdir/${1}.avhb"
+			sed -i "s:make-:m1ake:g" "$srcdir/${1}.avhb"
+			sed -i "s:make:make ${MAKE_EXTRA_FLAGS} :g" "$srcdir/${1}.avhb"
+			sed -i "s:ma1kedepends:makedepends:g" "$srcdir/${1}.avhb"
+			sed -i "s:cm1ake:cmake:g" "$srcdir/${1}.avhb"
+			sed -i "s:m1ake:make-:g" "$srcdir/${1}.avhb"
+		fi
         source "$srcdir/${1}.avhb" 
     else
         error "${srcdir}: ${1}.avhb file not found."
@@ -1303,35 +1316,102 @@ removePackage() {
 }
 
 getsrc(){
-  for url in ${source[@]};do
-    if [ "git" == $(echo $url | sed 's/.*:://' | sed 's/+.*//')  ]; then
-      local outputdir=''
-      local vcs=''
-      local repo=''
-      local checkout=''
-      # get the output directory name
-      outputdir=$(echo $url | sed 's/::.*//')
-      # get the version control system
-      vcs=$(echo $url | sed 's/.*:://' | sed 's/+.*//')
-      # get the repo
-      repo=$(echo $url | sed 's/.*:://' | sed 's/.*+//' | sed 's/#.*//')
-      # get if need to checkout
-      checkout=$(echo $url | sed 's/.*#//' | sed 's/.*=//' | sed 's/?.*//')
-	  
-      if [ "$vcs" == "git" ]; then
-	  	if [ ! -d "$pkgname" ]; then
-        	$vcs clone $repo
-		else 
-			message "$(gettext "Directory already exists. Skipping git clone ...")"
+  	for url in ${source[@]};do
+    	# if [ "git" == $(echo $url | sed 's/.*:://' | sed 's/+.*//')  ]; then
+		local outputdir=''
+		local vcs=''
+		local repo=''
+		local checkout=''
+		local archive=''
+		local is_tar_archive=''
+		local archivename=''
+		local is_archive_specified=''
+
+		is_archive_specified=$(echo "$url" | grep ::)
+		
+
+		# if tar archive then remove last two extensions
+		if [ -n "$is_archive_specified" ]; then
+
+			# get the output directory name
+			archive=$(echo $url | sed 's/::.*//')
+			is_tar_archive=$(echo "$archive" | grep tar)
+
+			if [ -n "$is_tar_archive" ]; then
+				archivename=$is_tar_archive
+			fi			
+
+			# echo "Archive specified: $is_archive_specified"
+			# echo "Archive is 1: $archivename"
+			
+		else
+			archivename=${url##*/}
+			# echo "Archive is 2: $archivename"
 		fi
-        pushd $pkgname
-          if [ -n "$checkout" ]; then
-            git checkout $checkout
-          fi
-        popd
-      fi
-    fi
-  done
+
+		#   archivename=${archive%.*}
+		#   tararchive=$(echo $archive | sed 's/^\(.*\) tar$/\1/')
+		
+
+		#   outputdir=${outputdir%.*}
+		#   archivename
+
+		#   echo "output directory is : ${tararchive}"
+
+
+		outputarchive=$(echo $url | sed 's/::.*//')
+		# get the version control system
+		vcs=$(echo $url | sed 's/.*:://' | sed 's/+.*//')
+		# get the repo
+		repo=$(echo $url | sed 's/.*:://' | sed 's/.*+//'  | sed 's/?.*//' | sed 's/#.*//')
+		# get if need to checkout
+		checkout=$(echo $url | sed 's/.*#//' | sed 's/.*=//' | sed 's/?.*//')
+
+		# get archive from url
+
+		
+		archive=${url##*/}
+		# get http protocol
+		protocol=$(echo  $url | sed 's/.*:://' | sed 's/:.*//')
+
+
+		# if found any vcs
+		if [ "$vcs" == "git" ]; then
+			if [ ! -d "$outputdir" ]; then
+				$vcs clone $repo
+				# checkout to the specified commit in url
+				pushd $pkgname
+					if [ -n "$checkout" ]; then
+						git checkout $checkout
+					fi
+				popd
+			else 
+				message "$(gettext "Directory already exists. Skipping git clone ...")"
+			fi
+			
+
+		# if source is a url
+		elif [ "$vcs" == "$repo" ]; then
+			# echo "VCS is: $vcs"
+			# echo "URL is: $repo"
+			# echo "protocol is: $protocol"
+			# echo "Archive name is: $archivename"
+
+			if [[ "$protocol" == "https" ]] || [[ "$protocol" == "http" ]]; then
+
+				if [ -f $srcarchivedir/$archivename ]; then
+					cp $srcarchivedir/$archivename . 
+				fi
+
+				if [ ! -f $archivename ]; then
+					curl -Lk $repo -o  $archivename
+				fi
+				
+				extract_file $archivename
+			fi
+		fi
+		# fi
+	done
 }
 
 getSourceArchiveFile() {
@@ -1347,46 +1427,48 @@ extract_file(){
 	local cmd=''
 	
 	# Extract the source archive		
-		if [ -n "${_tarname}" ]; then
-			echo "reached here tarname"
-			srcarchivefile=( $( find "${srcarchivedir}/${_tarname}-${pkgver}"* -type f -print || true ))
-			if [ -z $srcarchivefile ]; then
-				srcarchivefile=( $( find "${srcarchivedir}/${_tarname}"* -type f -print || true  ))
-			fi
-        elif [ -n "${_pkgname}" ]; then
-			srcarchivefile=( $( find "${srcarchivedir}/${_pkgname}-${pkgver}"* -type f -print || true ))
-			if [ -z $srcarchivefile ]; then
-				srcarchivefile=( $( find "${srcarchivedir}/${_pkgname}"* -type f -print || true  ))
-			fi
-		elif [ -n "${_realname}" ]; then
-			echo "reached here realname"
-			srcarchivefile=( $( find "${srcarchivedir}/${_realname}-${pkgver}"* -type f -print || true ))
-			if [ -z $srcarchivefile ]; then
-				srcarchivefile=( $( find "${srcarchivedir}/${_realname}"* -type f -print || true ))
-			fi
-		elif [ -n "${_pkgbasename}" ]; then
-			srcarchivefile=( $( find "${srcarchivedir}/${_pkgbasename}-${pkgver}"* -type f -print || true ))
-			if [ -z $srcarchivefile ]; then
-				srcarchivefile=( $( find "${srcarchivedir}/${_pkgbasename}"* -type f -print  || true ))
-			fi
-		elif [ -n "${pkgbase}" ]; then
-			echo "reached here pkgbase"
-			srcarchivefile=( $( find "${srcarchivedir}/${pkgbase}-${pkgver}"* -type f -print || true ))
-			if [ -z $srcarchivefile ]; then
-				srcarchivefile=( $( find "${srcarchivedir}/${pkgbase}"* -type f -print || true  ))
-			fi
-		elif [ -n "${pkgname}" ]; then
-			# continue executing if file not found
-			echo "reached here pkgname"
-			srcarchivefile=( $( find "${srcarchivedir}/${pkgname}-${pkgver}"* -type f -print || true ))
-			if [ -z $srcarchivefile ]; then
-				srcarchivefile=( $( find "${srcarchivedir}/${pkgname}"* -type f -print || true  ))
-			fi
-		else 
-			message "$(gettext "File not found")"
-			exit 1
-		fi
-
+		# if [ -n "${_tarname}" ]; then
+		# 	# echo "reached here tarname"
+		# 	srcarchivefile=( $( find "${srcarchivedir}/${_tarname}-${pkgver}"* -type f -print || true ))
+		# 	if [ -z $srcarchivefile ]; then
+		# 		srcarchivefile=( $( find "${srcarchivedir}/${_tarname}"* -type f -print || true  ))
+		# 	fi
+        # elif [ -n "${_pkgname}" ]; then
+		# 	srcarchivefile=( $( find "${srcarchivedir}/${_pkgname}-${pkgver}"* -type f -print || true ))
+		# 	if [ -z $srcarchivefile ]; then
+		# 		srcarchivefile=( $( find "${srcarchivedir}/${_pkgname}"* -type f -print || true  ))
+		# 	fi
+		# elif [ -n "${_realname}" ]; then
+		# 	# echo "reached here realname"
+		# 	srcarchivefile=( $( find "${srcarchivedir}/${_realname}-${pkgver}"* -type f -print || true ))
+		# 	if [ -z $srcarchivefile ]; then
+		# 		srcarchivefile=( $( find "${srcarchivedir}/${_realname}"* -type f -print || true ))
+		# 	fi
+		# elif [ -n "${_pkgbasename}" ]; then
+		# 	srcarchivefile=( $( find "${srcarchivedir}/${_pkgbasename}-${pkgver}"* -type f -print || true ))
+		# 	if [ -z $srcarchivefile ]; then
+		# 		srcarchivefile=( $( find "${srcarchivedir}/${_pkgbasename}"* -type f -print  || true ))
+		# 	fi
+		# elif [ -n "${pkgbase}" ]; then
+		# 	# echo "reached here pkgbase"
+		# 	srcarchivefile=( $( find "${srcarchivedir}/${pkgbase}-${pkgver}"* -type f -print || true ))
+		# 	if [ -z $srcarchivefile ]; then
+		# 		srcarchivefile=( $( find "${srcarchivedir}/${pkgbase}"* -type f -print || true  ))
+		# 	fi
+		# elif [ -n "${pkgname}" ]; then
+		# 	# continue executing if file not found
+		# 	# echo "reached here pkgname"
+		# 	srcarchivefile=( $( find "${srcarchivedir}/${pkgname}-${pkgver}"* -type f -print || true ))
+		# 	if [ -z $srcarchivefile ]; then
+		# 		srcarchivefile=( $( find "${srcarchivedir}/${pkgname}"* -type f -print || true  ))
+		# 	fi
+		# else 
+		# 	# message "$(gettext "File not found")"
+		# 	# exit 1
+		# 	srcarchivefile="${1}"
+		# fi
+		echo "Archive to extract is: ${1}"
+		srcarchivefile="${1}"
 		#message "$(gettext "File found is : $srcarchivefile")"
 		
 		if [ ! -z $srcarchivefile ]; then
@@ -1471,13 +1553,13 @@ clean_pkgdir(){
 		
 			# remove all the directories in pkgdir
 			local directories=( $( ls -d * ) )
-			for dir in ${directories[@]};do								
-					rm -rf ${dir}
+			for dir in ${directories[@]};do
+				sudo rm -rf ${dir}
 			done
 			# remove all the files in pkgdir
 			local files=( $( ls -A ) )
-			for file in ${files[@]};do								
-					rm -rf ${file}
+			for file in ${files[@]};do
+				sudo rm -rf ${file}
 			done
 			
 		popd			
@@ -1561,10 +1643,10 @@ build_log() {
 
 cleanpkg(){
 	# remove libtool specific .la files		
-	find "${pkgdir}" -type f -name '*.la' -delete
+	sudo find "${pkgdir}" -type f -name '*.la' -delete
 	# remove perls pesific unneded files		
-	find "${pkgdir}" -type f -name '.packlist' -delete
-	find "${pkgdir}" -type f -name '*.pod' -delete	
+	sudo find "${pkgdir}" -type f -name '.packlist' -delete
+	sudo find "${pkgdir}" -type f -name '*.pod' -delete	
 }
 
 strip_files(){	
@@ -2068,6 +2150,14 @@ makepkg(){
 			# Install license file
 			install_license "${make_pkgname}"
 
+			# fix directory ownership
+			local directories=(boot etc run srv var usr usr/bin usr/include usr/liv usr/lib32 usr/share)
+			for directory in ${directories[@]}; do
+				if [ -d $directory ]; then
+					sudo chown root:root $directory
+				fi
+			done
+
 			message "$(gettext "Creating package : ${avhpkg}${PKGEXT}")"
 			# https://github.com/centminmod/tar-zstd/blob/master/readme.md
 			# zstd lvl 16 compression auto threads long=27 with automatic level determination	
@@ -2116,20 +2206,20 @@ makepkg(){
 
 # install package
 install_pkg(){
-	if checkForRoot; then
+	# if checkForRoot; then
 		pushd "/"		
 			if [[ ${install_opt} == "yes" ]]; then			
-				bsdtar -xf "${builddir}/${1}${PKGEXT}"
-				/usr/bin/ldconfig			
+				sudo bsdtar -xf "${builddir}/${1}${PKGEXT}"
+				sudo /usr/bin/ldconfig			
 				success "$(gettext "Package ${1} installed successfully.")"			
 			else			
 				message "$(gettext "User opted not to install the package.")"	
 			fi
 		popd				
-	else
-		error "$(gettext "Root privileges are required. Try sudo!")"
-		exit 1
-	fi	
+	# else
+	# 	error "$(gettext "Root privileges are required. Try sudo!")"
+	# 	exit 1
+	# fi	
 }
 
 ########################################################################
@@ -2307,7 +2397,7 @@ package_build(){
 	pushd "${srcdir}"
 		# remove source directory if it is alrady extracted to make build clean
 		clean_srcdir
-		extract_file
+		# extract_file
 
 
 		
@@ -2324,7 +2414,7 @@ package_build(){
 			warning "$(gettext "Funtion getsrc() does not exist.")"			
 		fi
 
-		
+	
 		if ( function_exists 'pkgver' );then
 			pushd "${srcdir}"
 				# run function getsrc() from PKGBUILD file		
@@ -2363,6 +2453,7 @@ package_build(){
 				# run function avouch_config_guess_script() from PKGBUILD file
 				# avouch_config_guess_script
 				#build 2>&1 | tee -a "${srcdir}/build.log" 
+				
 				build || retval=$?
 				#retval=$? # '$?' is the return value of the previous command
 				message "$(gettext "Retun value is : ${retval}")"
@@ -2391,7 +2482,7 @@ package_build(){
 		message "$(gettext "Total packages in array : ${arraylength}")"
 		message "$(gettext "Packages are : ${pkgname[@]}")"
 		
-		if checkForRoot; then
+		# if checkForRoot; then
 
 			if [ ${total_no_of_packages} == 1 ]; then
 				clean_pkgdir
@@ -2420,10 +2511,10 @@ package_build(){
 					popd
 				done
 			fi
-		else
-			error "$(gettext "Root privileges are required. Try sudo!")"
-			exit 1
-		fi	
+		# else
+		# 	error "$(gettext "Root privileges are required. Try sudo!")"
+		# 	exit 1
+		# fi	
 }
 
 
@@ -2538,8 +2629,8 @@ main() {
 
 	echo ${#PKGNAME[@]}
 
-	echo "Build opions is : ${BUILD}"
-	echo "Install opions is : ${INSTALL}"
+	# echo "Build opions is : ${BUILD}"
+	# echo "Install opions is : ${INSTALL}"
 
 	if [ ${BUILD} -eq 1 ]; then
 		build_tools_exists
