@@ -26,6 +26,7 @@ BUILD=""
 INSTALL=""
 
 
+
 ########################################################################
 
 # check if messages are to be printed using color
@@ -257,6 +258,8 @@ fi
 
 	## select the build directory
 	builddir="/build"
+
+	PACKAGESDIR='/packages'
 
 	## select the build directory
 	# srcbundledir="/${builddir}/${AVHVER}/pkgbuild"
@@ -1377,17 +1380,32 @@ getsrc(){
 
 		# if found any vcs
 		if [ "$vcs" == "git" ]; then
-			if [ ! -d "$outputdir" ]; then
+
+				clean_srcdir
+
 				$vcs clone $repo
 				# checkout to the specified commit in url
-				pushd $pkgname
-					if [ -n "$checkout" ]; then
-						git checkout $checkout
-					fi
-				popd
-			else 
-				message "$(gettext "Directory already exists. Skipping git clone ...")"
-			fi
+				if [ -d "$pkgname" ]; then
+					pushd $pkgname
+						if [ -n "$checkout" ]; then
+							git checkout $checkout
+						fi
+					popd
+				elif [ -d "$_realname" ]; then
+					pushd $_realname
+						if [ -n "$checkout" ]; then
+							git checkout $checkout
+						fi
+					popd
+				elif [ -d "$_srcname" ]; then
+					pushd $_srcname
+						if [ -n "$checkout" ]; then
+							git checkout $checkout
+						fi
+					popd
+				fi
+
+		
 			
 
 		# if source is a url
@@ -1575,18 +1593,38 @@ clean_srcdir(){
 	# pushd "${srcdir}"
 		# rm -rf "${pkgname}-${pkgver}"
 		
-		if [ -d "${srcdir}/${pkgname}-${pkgver}" ]; then			
-			rm -rf "${srcdir}/${pkgname}-${pkgver}"
+		if [ -d "${pkgname}-${pkgver}" ]; then			
+			rm -rf "${pkgname}-${pkgver}"
 			
-		elif [ -d "${srcdir}/${_pkgname}-${pkgver}" ]; then
-			rm -rf "${srcdir}/${_pkgname}-${pkgver}"		
+		elif [ -d "${_pkgname}-${pkgver}" ]; then
+			rm -rf "${_pkgname}-${pkgver}"		
 					
-		elif [ -d "${srcdir}/${pkgname}-${_pkgver}" ]; then
-			rm -rf "${srcdir}/${pkgname}-${_pkgver}"
+		elif [ -d "${pkgname}-${_pkgver}" ]; then
+			rm -rf "${pkgname}-${_pkgver}"
 			
-		elif [ -d "${srcdir}/${_realname}-${pkgver}" ]; then
-			rm -rf "${srcdir}/${_realname}-${pkgver}"
-		
+		elif [ -d "${_realname}-${pkgver}" ]; then
+			rm -rf "${_realname}-${pkgver}"
+
+		elif [ -d "${pkgname}/${_realname}" ]; then
+			rm -rf "${pkgname}/${_realname}"
+
+		elif [ -d "${pkgname}/${pkgbase}" ]; then
+			rm -rf "${pkgname}/${pkgbase}"	
+
+		elif [ -d "/${pkgname}" ]; then
+			rm -rf "${pkgname}"	
+
+		elif [ -d "${_realname}" ]; then
+			rm -rf "${_realname}"
+
+		elif [ -d "${pkgbase}" ]; then
+			rm -rf "${pkgbase}"	
+
+		elif [ -d "${pkgname}" ]; then
+			rm -rf "${pkgname}"
+
+		elif [ -d "build" ]; then
+			rm -rf "build"
 		fi	
 	# popd
 }
@@ -1642,8 +1680,13 @@ build_log() {
 }
 
 cleanpkg(){
-	# remove libtool specific .la files		
-	sudo find "${pkgdir}" -type f -name '*.la' -delete
+	# remove libtool specific .la files	
+	if check_option "libtool" "n"; then
+		message "$(gettext "Removing "%s" files...")" "libtool"
+		# find . ! -type d -name "*.la" -exec rm -f -- '{}' +
+		sudo find "${pkgdir}" -type f -name '*.la' -delete
+	fi
+
 	# remove perls pesific unneded files		
 	sudo find "${pkgdir}" -type f -name '.packlist' -delete
 	sudo find "${pkgdir}" -type f -name '*.pod' -delete	
@@ -1660,10 +1703,10 @@ strip_files(){
 		# Remove all symbol and relocation information
 		#[[ -z ${STRIP_BINARIES+x} ]] && STRIP_BINARIES="-s"
 
-		find "${pkgdir}" -type f -name '*.so' -exec strip "${STRIP_SHARED}" {} \;
-		find "${pkgdir}" -type f -name '*.so.*' -exec strip "${STRIP_SHARED}" {} \;
-		find "${pkgdir}" -type f -name '*.a' -exec strip "${STRIP_STATIC}" {} \;
-		find "${pkgdir}" -type f -executable  -exec strip "${STRIP_BINARIES}" {} \;	
+		sudo find "${pkgdir}" -type f -name '*.so' -exec strip "${STRIP_SHARED}" {} \;
+		sudo find "${pkgdir}" -type f -name '*.so.*' -exec strip "${STRIP_SHARED}" {} \;
+		sudo find "${pkgdir}" -type f -name '*.a' -exec strip "${STRIP_STATIC}" {} \;
+		sudo find "${pkgdir}" -type f -executable  -exec strip "${STRIP_BINARIES}" {} \;	
 	else
 		message "$(gettext "Not stripping debugging informations...")"
 	fi
@@ -2151,17 +2194,17 @@ makepkg(){
 			install_license "${make_pkgname}"
 
 			# fix directory ownership
-			local directories=(boot etc run srv var usr usr/bin usr/include usr/liv usr/lib32 usr/share)
+			local directories=(boot etc run srv var usr)
 			for directory in ${directories[@]}; do
 				if [ -d $directory ]; then
-					sudo chown root:root $directory
+					sudo chown root:root -R $directory
 				fi
 			done
 
 			message "$(gettext "Creating package : ${avhpkg}${PKGEXT}")"
 			# https://github.com/centminmod/tar-zstd/blob/master/readme.md
 			# zstd lvl 16 compression auto threads long=27 with automatic level determination	
-			tar "-I zstd -19 -T0 --long=27 --adapt" -cf "${avhpkg}${PKGEXT}" *
+			sudo tar "-I zstd -19 -T0 --long=27 --adapt" -cf "${avhpkg}${PKGEXT}" *
 		else
 
 			message "$(gettext "User opted not to make package")"	
@@ -2173,11 +2216,11 @@ makepkg(){
 			success "$(gettext "Package ${avhpkg}${PKGEXT} created successfully.")"	
 			# move the package to the other directory to make other packages
 			if [ -f "${builddir}/${avhpkg}${PKGEXT}" ]; then	
-				rm -f "${builddir}/${avhpkg}${PKGEXT}"
-				mv -f "${avhpkg}${PKGEXT}" "${builddir}/${avhpkg}${PKGEXT}"
+				sudo rm -f "${builddir}/${avhpkg}${PKGEXT}"
+				sudo mv -f "${avhpkg}${PKGEXT}" "${PACKAGESDIR}/${avhpkg}${PKGEXT}"
 									
 			else
-				mv -f "${avhpkg}${PKGEXT}" "${builddir}/${avhpkg}${PKGEXT}"				
+				sudo mv -f "${avhpkg}${PKGEXT}" "${PACKAGESDIR}/${avhpkg}${PKGEXT}"				
 			fi
 			if [ ${INSTALL} -eq 1 ]; then
 				install_pkg "${avhpkg}"
@@ -2209,7 +2252,7 @@ install_pkg(){
 	# if checkForRoot; then
 		pushd "/"		
 			if [[ ${install_opt} == "yes" ]]; then			
-				sudo bsdtar -xf "${builddir}/${1}${PKGEXT}"
+				sudo bsdtar -xf "${PACKAGESDIR}/${1}${PKGEXT}"
 				sudo /usr/bin/ldconfig			
 				success "$(gettext "Package ${1} installed successfully.")"			
 			else			
@@ -2396,7 +2439,7 @@ package_build(){
 	copy_srcbundledir ${1}
 	pushd "${srcdir}"
 		# remove source directory if it is alrady extracted to make build clean
-		clean_srcdir
+		# clean_srcdir
 		# extract_file
 
 
