@@ -1319,6 +1319,7 @@ removePackage() {
 }
 
 getsrc(){
+	clean_srcdir
   	for url in ${source[@]};do
     	# if [ "git" == $(echo $url | sed 's/.*:://' | sed 's/+.*//')  ]; then
 		local outputdir=''
@@ -1377,37 +1378,30 @@ getsrc(){
 		# get http protocol
 		protocol=$(echo  $url | sed 's/.*:://' | sed 's/:.*//')
 
-
 		# if found any vcs
-		if [ "$vcs" == "git" ]; then
+		if [ "$vcs" == "git" ]; then		
 
-				clean_srcdir
-
-				$vcs clone $repo
-				# checkout to the specified commit in url
-				if [ -d "$pkgname" ]; then
-					pushd $pkgname
-						if [ -n "$checkout" ]; then
-							git checkout $checkout
-						fi
-					popd
-				elif [ -d "$_realname" ]; then
-					pushd $_realname
-						if [ -n "$checkout" ]; then
-							git checkout $checkout
-						fi
-					popd
-				elif [ -d "$_srcname" ]; then
-					pushd $_srcname
-						if [ -n "$checkout" ]; then
-							git checkout $checkout
-						fi
-					popd
-				fi
-
-		
-			
-
+			$vcs clone $repo
+			# checkout to the specified commit in url
+			if [ -d "$pkgname" ]; then
+				pushd $pkgname
+					if [ -n "$checkout" ]; then
+						git checkout $checkout
+					fi
+				popd
+			elif [ -d "$_realname" ]; then
+				pushd $_realname
+					if [ -n "$checkout" ]; then
+						git checkout $checkout
+					fi
+				popd
+			elif [ -d "$_srcname" ]; then
+				pushd $_srcname
+					if [ -n "$checkout" ]; then
+						git checkout $checkout
+					fi
+				popd
+			fi
 		# if source is a url
 		elif [ "$vcs" == "$repo" ]; then
 			# echo "VCS is: $vcs"
