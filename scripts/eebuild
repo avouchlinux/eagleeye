@@ -254,7 +254,7 @@ fi
 
 	## select the directory to install package
 	# pkgdir="/pkg"
-	pkgdir=$(mktemp -d)	
+	pkgdir=$(mktemp -d)
 
 	## select the build directory
 	builddir="/build"
@@ -1616,8 +1616,9 @@ clean_srcdir(){
 
 		elif [ -d "${pkgname}" ]; then
 			rm -rf "${pkgname}"
+		fi
 
-		elif [ -d "build" ]; then
+		if [ -d "build" ]; then
 			rm -rf "build"
 		fi	
 	# popd
@@ -1853,7 +1854,7 @@ pkginfo_xml() {
 		IFS=$'\n'
 
         # find all the files in pkgdir and License file not found then filter out the first . and / with sed
-        local files=($(find  -L ${pkgdir} -type f -print | sed 's/^.pkg//'))
+        local files=($(find  -L ${pkgdir}/ -type f -print | sed 's/^.pkg//'))
 
 		# restore it
 		IFS=$OLDIFS
@@ -1867,6 +1868,9 @@ pkginfo_xml() {
 		for file in "${files[@]}";do
 		    # local file_filtered=`echo ${file} | sed -e 's|<=| \&#8804;|g' | sed -e 's|>=| \&#8805;|g' | sed -e 's|&|\&#38;|g' | sed -e 's|+|\&#43;|g' | sed -e 's|<|\&#60;|g' | sed -e 's|>|\&#62;|g'`
             echo "    <File>${file}</File>" >> "${pkgdir}/usr/share/avouch/pkginfo/${_pkgname}.xml"
+            
+            # remove temporary directory
+            sed -i "s|$pkgdir||g" "${pkgdir}/usr/share/avouch/pkginfo/${_pkgname}.xml"
         done
 		# echo "  </${_pkgname}>" >> "${pkgdir}/usr/share/avouch/pkginfo/${_pkgname}.xml"
     # End of root
