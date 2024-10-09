@@ -11,7 +11,7 @@ PARAMETER=${1}
 EEVER=0.4.0
 
 # change to english locale!
-export LANG="en_US"
+export LANG="en_US.UTF-8"
 
 LIBRARY=${LIBRARY:-'/usr/share/eebuild'}
 
@@ -311,8 +311,8 @@ TIME=$( date +%H:%M )
 TIMEZONE="$(date +%Z)"
 
 ## make flags
-#MAKEFLAGS="-j $(grep --count processor /proc/cpuinfo)"
-MAKE_EXTRA_FLAGS="${MAKEFLAGS} -j$(nproc)"
+# MAKEFLAGS="-j $((grep --count processor /proc/cpuinfo) - 2)"
+MAKE_EXTRA_FLAGS="${MAKEFLAGS} -j$(($(nproc) - 2))"
 
 
 
@@ -608,12 +608,26 @@ copy_srcbundledir(){
         message "Source directory is : ${srcdir}"
 		if [ -n ${MAKEFLAGS} ]; then
 			sed -i "s:makedepends:ma1kedepends:g" "$srcdir/${1}.avhb"
+            sed -i "s:'make ':m6ake:g" "$srcdir/${1}.avhb"
 			sed -i "s:cmake:cm1ake:g" "$srcdir/${1}.avhb"
-			sed -i "s:make-:m1ake:g" "$srcdir/${1}.avhb"
+			sed -i "s:make-:m1ake:g" "$srcdir/${1}.avhb"            
+			sed -i "s:-make:-m2ake:g" "$srcdir/${1}.avhb"
+			sed -i "s:qmake6:qm3ake6:g" "$srcdir/${1}.avhb"
+            sed -i "s:make_:m4ake:g" "$srcdir/${1}.avhb"
+            sed -i "s:'make.':m5ake:g" "$srcdir/${1}.avhb"
+
+			# add make flags
 			sed -i "s:make:make ${MAKE_EXTRA_FLAGS} :g" "$srcdir/${1}.avhb"
+
+			# rewrite make to origional
 			sed -i "s:ma1kedepends:makedepends:g" "$srcdir/${1}.avhb"
+            sed -i "s:m6ake:'make ':g" "$srcdir/${1}.avhb"
 			sed -i "s:cm1ake:cmake:g" "$srcdir/${1}.avhb"
 			sed -i "s:m1ake:make-:g" "$srcdir/${1}.avhb"
+			sed -i "s:-m2ake:-make:g" "$srcdir/${1}.avhb"
+			sed -i "s:qm3ake6:qmake6:g" "$srcdir/${1}.avhb"
+            sed -i "s:m4ake:make_:g" "$srcdir/${1}.avhb"
+            sed -i "s:m5ake:'make.':g" "$srcdir/${1}.avhb"
 		fi
         source "$srcdir/${1}.avhb" 
     else
@@ -1331,7 +1345,8 @@ getsrc(){
 		local archivename=''
 		local is_archive_specified=''
 
-		is_archive_specified=$(echo "$url" | grep ::)
+		local is_archive_specified=$(echo "$url" | grep ::)
+		local provided_name=$(echo $url | sed 's/.*:://')
 		
 
 		# if tar archive then remove last two extensions
@@ -1342,11 +1357,16 @@ getsrc(){
 			is_tar_archive=$(echo "$archive" | grep tar)
 
 			if [ -n "$is_tar_archive" ]; then
-				archivename=$is_tar_archive
+				archivename=${is_tar_archive##*/}
+			else
+				is_tar_archive=$(echo "$archive" | grep -E 'patch|diff')
+				archivename=${is_tar_archive##*/}
+
+				# echo "Archive is 1: $archivename"
 			fi			
 
 			# echo "Archive specified: $is_archive_specified"
-			# echo "Archive is 1: $archivename"
+			
 			
 		else
 			archivename=${url##*/}
@@ -1418,6 +1438,16 @@ getsrc(){
 				if [ ! -f $archivename ]; then
 					curl -Lk $repo -o  $archivename
 				fi
+
+				if [ ! -f $archivename ]; then
+					curl -Lk $repo -o  $archivename
+				fi
+
+				if [ -n $provided_name ]; then
+
+					mv  $archivename $provided_name
+				fi
+
 				
 				extract_file $archivename
 			fi
@@ -2192,12 +2222,12 @@ makepkg(){
 			install_license "${make_pkgname}"
 
 			# fix directory ownership
-			local directories=(boot etc run srv var usr)
-			for directory in ${directories[@]}; do
-				if [ -d $directory ]; then
-					sudo chown root:root -R $directory
-				fi
-			done
+			# local directories=(boot etc run srv var usr usr/bin usr/lib)
+			# for directory in ${directories[@]}; do
+			# 	if [ -d $directory ]; then
+			# 		sudo chown root:root $directory
+			# 	fi
+			# done
 
 			message "$(gettext "Creating package : ${avhpkg}${PKGEXT}")"
 			# https://github.com/centminmod/tar-zstd/blob/master/readme.md
@@ -2523,7 +2553,7 @@ package_build(){
 		message "$(gettext "Total packages in array : ${arraylength}")"
 		message "$(gettext "Packages are : ${pkgname[@]}")"
 		
-		# if checkForRoot; then
+		if checkForRoot; then
 
 			if [ ${total_no_of_packages} == 1 ]; then
 				clean_pkgdir
@@ -2552,10 +2582,10 @@ package_build(){
 					popd
 				done
 			fi
-		# else
-		# 	error "$(gettext "Root privileges are required. Try sudo!")"
-		# 	exit 1
-		# fi	
+		else
+			error "$(gettext "Root privileges are required. Try sudo!")"
+			exit 1
+		fi	
 }
 
 
@@ -2676,7 +2706,7 @@ main() {
 	if [ ${BUILD} -eq 1 ]; then
 		build_tools_exists
 		# default linker to use
-		use_linker "gold"
+		use_linker "ld"
 
 		if [ ${#PKGNAME[@]} -eq 1 ]; then
 			unset srcdir
