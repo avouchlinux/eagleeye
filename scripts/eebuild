@@ -310,6 +310,14 @@ DATE=$( date +%Y-%m-%d )
 TIME=$( date +%H:%M )
 TIMEZONE="$(date +%Z)"
 
+if [[ -n $SOURCE_DATE_EPOCH ]]; then
+	REPRODUCIBLE=1
+else
+	SOURCE_DATE_EPOCH=$(date +%s)
+fi
+export SOURCE_DATE_EPOCH
+
+
 ## make flags
 # MAKEFLAGS="-j $((grep --count processor /proc/cpuinfo) - 2)"
 MAKE_EXTRA_FLAGS="${MAKEFLAGS} -j$(($(nproc) - 2))"
@@ -595,7 +603,7 @@ copy_srcbundledir(){
 			if [ -f "${builddir}/${1}/${1}.avhb" ]; then
 				rm "${builddir}/${1}/${1}.avhb"
 			fi
-            message "$(gettext "Package source found at : $dir")"
+            # message "$(gettext "Package source found at : $dir")"
             cp -a "${dir}" "${builddir}/"
             break
         fi        
@@ -606,29 +614,29 @@ copy_srcbundledir(){
     # check for source directory
     if [ -f "$srcdir/${1}.avhb" ]; then
         message "Source directory is : ${srcdir}"
-		if [ -n ${MAKEFLAGS} ]; then
-			sed -i "s:makedepends:ma1kedepends:g" "$srcdir/${1}.avhb"
-            sed -i "s:'make ':m6ake:g" "$srcdir/${1}.avhb"
-			sed -i "s:cmake:cm1ake:g" "$srcdir/${1}.avhb"
-			sed -i "s:make-:m1ake:g" "$srcdir/${1}.avhb"            
-			sed -i "s:-make:-m2ake:g" "$srcdir/${1}.avhb"
-			sed -i "s:qmake6:qm3ake6:g" "$srcdir/${1}.avhb"
-            sed -i "s:make_:m4ake:g" "$srcdir/${1}.avhb"
-            sed -i "s:'make.':m5ake:g" "$srcdir/${1}.avhb"
+	# 	if [ -n ${MAKEFLAGS} ]; then
+	# 		sed -i "s:makedepends:ma1kedepends:g" "$srcdir/${1}.avhb"
+    #         sed -i "s:'make ':m6ake:g" "$srcdir/${1}.avhb"
+	# 		sed -i "s:cmake:cm1ake:g" "$srcdir/${1}.avhb"
+	# 		sed -i "s:make-:m1ake:g" "$srcdir/${1}.avhb"            
+	# 		sed -i "s:-make:-m2ake:g" "$srcdir/${1}.avhb"
+	# 		sed -i "s:qmake6:qm3ake6:g" "$srcdir/${1}.avhb"
+    #         sed -i "s:make_:m4ake:g" "$srcdir/${1}.avhb"
+    #         sed -i "s:'make.':m5ake:g" "$srcdir/${1}.avhb"
 
-			# add make flags
-			sed -i "s:make:make ${MAKE_EXTRA_FLAGS} :g" "$srcdir/${1}.avhb"
+	# 		# add make flags
+	# 		sed -i "s:make:make ${MAKE_EXTRA_FLAGS} :g" "$srcdir/${1}.avhb"
 
-			# rewrite make to origional
-			sed -i "s:ma1kedepends:makedepends:g" "$srcdir/${1}.avhb"
-            sed -i "s:m6ake:'make ':g" "$srcdir/${1}.avhb"
-			sed -i "s:cm1ake:cmake:g" "$srcdir/${1}.avhb"
-			sed -i "s:m1ake:make-:g" "$srcdir/${1}.avhb"
-			sed -i "s:-m2ake:-make:g" "$srcdir/${1}.avhb"
-			sed -i "s:qm3ake6:qmake6:g" "$srcdir/${1}.avhb"
-            sed -i "s:m4ake:make_:g" "$srcdir/${1}.avhb"
-            sed -i "s:m5ake:'make.':g" "$srcdir/${1}.avhb"
-		fi
+	# 		# rewrite make to origional
+	# 		sed -i "s:ma1kedepends:makedepends:g" "$srcdir/${1}.avhb"
+    #         sed -i "s:m6ake:'make ':g" "$srcdir/${1}.avhb"
+	# 		sed -i "s:cm1ake:cmake:g" "$srcdir/${1}.avhb"
+	# 		sed -i "s:m1ake:make-:g" "$srcdir/${1}.avhb"
+	# 		sed -i "s:-m2ake:-make:g" "$srcdir/${1}.avhb"
+	# 		sed -i "s:qm3ake6:qmake6:g" "$srcdir/${1}.avhb"
+    #         sed -i "s:m4ake:make_:g" "$srcdir/${1}.avhb"
+    #         sed -i "s:m5ake:'make.':g" "$srcdir/${1}.avhb"
+		# fi
         source "$srcdir/${1}.avhb" 
     else
         error "${srcdir}: ${1}.avhb file not found."
@@ -658,6 +666,39 @@ copy_srcbundledir(){
 }
 #copy_srcbundledir
 
+add_make_flags() {
+        # check for source directory
+    # if [ -f "$srcdir/${1}.avhb" ]; then
+        # message "Source directory is : ${srcdir}"
+		# if [ -n ${MAKEFLAGS} ]; then
+			sed -i "s:makedepends:ma1kedepends:g" "$srcdir/${1}.avhb"
+            sed -i "s:'make ':m6ake:g" "$srcdir/${1}.avhb"
+			sed -i "s:cmake:cm1ake:g" "$srcdir/${1}.avhb"
+			sed -i "s:make-:m1ake:g" "$srcdir/${1}.avhb"            
+			sed -i "s:-make:-m2ake:g" "$srcdir/${1}.avhb"
+			sed -i "s:qmake6:qm3ake6:g" "$srcdir/${1}.avhb"
+            sed -i "s:make_:m4ake:g" "$srcdir/${1}.avhb"
+            sed -i "s:'make.':m5ake:g" "$srcdir/${1}.avhb"
+
+			# add make flags
+			sed -i "s:make:make ${MAKE_EXTRA_FLAGS} :g" "$srcdir/${1}.avhb"
+
+			# rewrite make to origional
+			sed -i "s:ma1kedepends:makedepends:g" "$srcdir/${1}.avhb"
+            sed -i "s:m6ake:'make ':g" "$srcdir/${1}.avhb"
+			sed -i "s:cm1ake:cmake:g" "$srcdir/${1}.avhb"
+			sed -i "s:m1ake:make-:g" "$srcdir/${1}.avhb"
+			sed -i "s:-m2ake:-make:g" "$srcdir/${1}.avhb"
+			sed -i "s:qm3ake6:qmake6:g" "$srcdir/${1}.avhb"
+            sed -i "s:m4ake:make_:g" "$srcdir/${1}.avhb"
+            sed -i "s:m5ake:'make.':g" "$srcdir/${1}.avhb"
+		# fi
+        # source "$srcdir/${1}.avhb" 
+    # else
+    #     error "${srcdir}: ${1}.avhb file not found."
+    #     exit 1
+    # fi
+}
 
 function_exists(){
 	
@@ -1332,126 +1373,356 @@ removePackage() {
 	fi
 }
 
+get_vcs() {
+	# 1. get all before :://
+	# 2. get all before +
+	echo $1| sed 's/.*:://' | sed 's/:.*//' | sed 's/+.*//' | grep -e git -e svn -e bzr -e hg
+}
+
+get_protocol() {
+	# 1. get all before :://
+	# 2. get all before //
+	# 3. get all after +
+	# echo "$1" | grep "://" | sed -e's,^\(.*://\).*,\1,g'
+	echo  $1 | sed 's/.*:://' | sed 's/:.*//' | sed 's/.*+//'
+}
+
+get_filename() {
+	local filename_is_specified=''
+	if [ -z $(get_vcs $1) ]; then
+		# 1. get if :: is present in url with grep
+		# 2. strip  off all after :: with sed
+		filename_is_specified=$(echo $1   | grep '::' | sed 's/::.*//')
+		if [ -n "$filename_is_specified" ]; then
+			echo "$filename_is_specified"
+		else
+			# get the string after last / in the url
+			echo "${1##*/}"
+		fi		
+	fi
+}
+
+get_repository() {
+	# 1. stip off all before and :://
+	# 2. strip off git+ or svn+ or bzr+ from the url
+	# 3. strip url query arguments from the url
+	# 4. strip of commit or tag wich is defined after # from the url
+
+	local vcs=$(get_vcs $1)
+	if [ -z $vcs ]; then
+		return
+	else
+		echo $1 | sed 's/.*:://' | sed "s/$vcs+//" | sed 's/?.*//' | sed 's/#.*//'
+	fi
+
+}
+
+get_clean_url() {
+	# 1. stip off all before and :://
+	# 2. strip off git+ or svn+ or bzr+ from the url
+	# 3. strip url query arguments from the url
+	# 4. strip of commit or tag wich is defined after # from the url
+	local vcs=$(get_vcs $1)
+	if [ -z $vcs ]; then
+		echo $1 | sed 's/.*:://' | sed "s/$vcs+//" | sed 's/?.*//' | sed 's/#.*//'
+	else
+		return
+	fi
+}
+
+get_git_checkout() {
+	local vcs=$(get_vcs $1)
+	if [ -z $vcs ]; then		
+		return
+	else
+		# 1. stip off all before and #
+		# 2. strip off all before and =
+		# 3. strip url query arguments from the url
+		echo $1 | sed 's/.*#//' | sed 's/.*=//' | sed 's/?.*//'
+	fi
+}
+
+get_specified_directory() {
+	# 1. get if :: is present in url with grep
+	# 2. strip  off all after :: with sed
+	if [ -n $vcs ]; then
+		echo $1 | grep '::' | sed 's/::.*//'
+	else
+		return
+	fi
+}
+
+get_extracted_directory() {
+	# 1. get the last part of url
+	# 2. strip  off all after .tar with sed
+	# 2. strip  off all after # with sed
+	# 2. strip  off all after . with sed
+	echo ${1##*/} | sed 's/.tar.*//' | sed 's/#.*//' | sed "s/\..*//"
+}
+
+
+
 getsrc(){
 	clean_srcdir
+
+	local outputdir
+	local vcs
+	local protocol
+	local is_archive_specified
+	local filename
+	local repo
+	local clean_url
+	local git_checkout
+	local specified_directory
+	local extracted_directory
+
+    # echo ${source[@]}
+
   	for url in ${source[@]};do
-    	# if [ "git" == $(echo $url | sed 's/.*:://' | sed 's/+.*//')  ]; then
-		local outputdir=''
-		local vcs=''
-		local repo=''
-		local checkout=''
+    	
+		
+		
 		local archive=''
 		local is_tar_archive=''
-		local archivename=''
-		local is_archive_specified=''
-
-		local is_archive_specified=$(echo "$url" | grep ::)
-		local provided_name=$(echo $url | sed 's/.*:://')
 		
+		vcs=$(get_vcs $url)
+		# echo "VCS is: $vcs"
 
-		# if tar archive then remove last two extensions
-		if [ -n "$is_archive_specified" ]; then
+		protocol=$(get_protocol $url)
+		# echo "Protocol is: $protocol"
 
-			# get the output directory name
-			archive=$(echo $url | sed 's/::.*//')
-			is_tar_archive=$(echo "$archive" | grep tar)
 
-			if [ -n "$is_tar_archive" ]; then
-				archivename=${is_tar_archive##*/}
-			else
-				is_tar_archive=$(echo "$archive" | grep -E 'patch|diff')
-				archivename=${is_tar_archive##*/}
+		filename=$(get_filename $url)
+		# echo "File name is: $filename"
 
-				# echo "Archive is 1: $archivename"
+		repo=$(get_repository $url)
+		# echo "Repository is: $repo"
+
+		clean_url=$(get_clean_url $url)
+		# echo "Clean URL is: $clean_url"
+
+		git_checkout=$(get_git_checkout $url)
+		# echo "Checkout is: $git_checkout"
+
+		specified_directory=$(get_specified_directory $url)
+		# echo "specified directory is: $specified_directory"
+
+		extracted_directory=$(get_extracted_directory $url)
+		# echo "extracted directory is: $extracted_directory"
+
+		if [[ -n $vcs ]]; then
+			if [ $vcs == 'git' ]; then
+				$vcs clone $repo
+
+				pushd $extracted_directory
+					if [ -n "$checkout" ]; then
+						git checkout $checkout
+					fi
+				popd
+
+				if [ -n "$specified_directory" ]; then
+					if [ "$specified_directory" != "$extracted_directory" ]; then
+						mv "$extracted_directory" "$specified_directory"
+					fi
+				fi
+			fi
+			if [ $vcs == 'svn' ]; then
+				$vcs co $repo
+				pushd $extracted_directory
+					if [ -n "$checkout" ]; then
+						svn checkout $checkout
+					fi
+				popd
+
+				if [ -n "$specified_directory" ]; then
+					if [ "$specified_directory" != "$extracted_directory" ]; then
+						mv "$extracted_directory" "$specified_directory"
+					fi
+				fi
+			fi
+			if [ $vcs == 'hg' ]; then
+				$vcs clone $repo
+				pushd $extracted_directory
+					if [ -n "$checkout" ]; then
+						hg checkout $checkout
+					fi
+				popd
+
+				if [ -n "$specified_directory" ]; then
+					if [ "$specified_directory" != "$extracted_directory" ]; then
+						mv "$extracted_directory" "$specified_directory"
+					fi
+				fi
 			fi			
-
-			# echo "Archive specified: $is_archive_specified"
-			
-			
-		else
-			archivename=${url##*/}
-			# echo "Archive is 2: $archivename"
 		fi
 
-		#   archivename=${archive%.*}
-		#   tararchive=$(echo $archive | sed 's/^\(.*\) tar$/\1/')
-		
-
-		#   outputdir=${outputdir%.*}
-		#   archivename
-
-		#   echo "output directory is : ${tararchive}"
-
-
-		outputarchive=$(echo $url | sed 's/::.*//')
-		# get the version control system
-		vcs=$(echo $url | sed 's/.*:://' | sed 's/+.*//')
-		# get the repo
-		repo=$(echo $url | sed 's/.*:://' | sed 's/.*+//'  | sed 's/?.*//' | sed 's/#.*//')
-		# get if need to checkout
-		checkout=$(echo $url | sed 's/.*#//' | sed 's/.*=//' | sed 's/?.*//')
-
-		# get archive from url
-
-		
-		archive=${url##*/}
-		# get http protocol
-		protocol=$(echo  $url | sed 's/.*:://' | sed 's/:.*//')
-
-		# if found any vcs
-		if [ "$vcs" == "git" ]; then		
-
-			$vcs clone $repo
-			# checkout to the specified commit in url
-			if [ -d "$pkgname" ]; then
-				pushd $pkgname
-					if [ -n "$checkout" ]; then
-						git checkout $checkout
-					fi
-				popd
-			elif [ -d "$_realname" ]; then
-				pushd $_realname
-					if [ -n "$checkout" ]; then
-						git checkout $checkout
-					fi
-				popd
-			elif [ -d "$_srcname" ]; then
-				pushd $_srcname
-					if [ -n "$checkout" ]; then
-						git checkout $checkout
-					fi
-				popd
-			fi
-		# if source is a url
-		elif [ "$vcs" == "$repo" ]; then
-			# echo "VCS is: $vcs"
-			# echo "URL is: $repo"
-			# echo "protocol is: $protocol"
-			# echo "Archive name is: $archivename"
-
+		if [ -z $vcs ]; then
 			if [[ "$protocol" == "https" ]] || [[ "$protocol" == "http" ]]; then
 
 				if [ -f $srcarchivedir/$archivename ]; then
 					cp $srcarchivedir/$archivename . 
+				fi				
+				if [ ! -f $filename ]; then
+
+					curl -Lk $clean_url -o  $filename
 				fi
-
-				if [ ! -f $archivename ]; then
-					curl -Lk $repo -o  $archivename
-				fi
-
-				if [ ! -f $archivename ]; then
-					curl -Lk $repo -o  $archivename
-				fi
-
-				if [ -n $provided_name ]; then
-
-					mv  $archivename $provided_name
-				fi
-
-				
-				extract_file $archivename
+				# echo "File to extract is: $filename"
+				extract_file $filename
 			fi
 		fi
+		
+		# local is_archive_specified=$(echo "$url" | grep ::)
+		# local provided_name=$(echo $url | sed 's/.*:://')
+
+
+		# # Get protocol
+		# local protocol=$(echo  $url | sed 's/.*:://' | sed 's/:.*//')
+		
+
+		# # if tar archive then remove last two extensions
+		# if [ -n "$is_archive_specified" ]; then
+
+		# 	# get the output directory name
+		# 	archive=$(echo $url | sed 's/::.*//')
+		# 	is_tar_archive=$(echo "$archive" | grep -e tar -e gz -e xz -e bz2 -e zip -e tgz)
+
+		# 	if [ -n "$is_tar_archive" ]; then
+		# 		archivename=${is_tar_archive##*/}
+		# 	else
+		# 		is_tar_archive=$(echo "$archive" | grep -E 'patch|diff')
+		# 		archivename=${is_tar_archive##*/}
+		# 	fi
+        #     # extract file and return
+		# 	# extract_file $archivename
+        #     # return			
+		# else
+            
+		# 	archivename=${url##*/}
+		# 	# echo "Archive is 2: $archivename"
+        #     # echo "File to extract is: $archivename"
+		# fi
+
+		# #   archivename=${archive%.*}
+		# #   tararchive=$(echo $archive | sed 's/^\(.*\) tar$/\1/')
+		
+
+		# #   outputdir=${outputdir%.*}
+		# #   archivename
+
+		# #   echo "output directory is : ${tararchive}"
+
+
+		# outputarchive=$(echo $url | sed 's/::.*//')
+		# # get the version control system
+		# vcs=$(echo $url | sed 's/.*:://' | sed 's/+.*//')
+		# # get the repo
+		# repo=$(echo $url | sed 's/.*:://' | sed 's/.*+//'  | sed 's/?.*//' | sed 's/#.*//')
+        # # repo=$(echo $url | sed 's/.*:://' | sed 's/?.*//' | sed 's/#.*//')
+		# # get if need to checkout
+		# checkout=$(echo $url | sed 's/.*#//' | sed 's/.*=//' | sed 's/?.*//')
+
+		# # get archive from url
+
+		
+		# archive=${url##*/}
+		# # get http protocol
+		# protocol=$(echo  $url | sed 's/.*:://' | sed 's/:.*//')
+
+        
+
+		# # if found any vcs
+		# if [ "$vcs" == "git" ]; then		
+
+		# 	$vcs clone $repo
+		# 	# checkout to the specified commit in url
+		# 	if [ -d "$pkgname" ]; then
+		# 		pushd $pkgname
+		# 			if [ -n "$checkout" ]; then
+		# 				git checkout $checkout
+		# 			fi
+		# 		popd
+		# 	elif [ -d "$_realname" ]; then
+		# 		pushd $_realname
+		# 			if [ -n "$checkout" ]; then
+		# 				git checkout $checkout
+		# 			fi
+		# 		popd
+		# 	elif [ -d "$_srcname" ]; then
+		# 		pushd $_srcname
+		# 			if [ -n "$checkout" ]; then
+		# 				git checkout $checkout
+		# 			fi
+		# 		popd
+		# 	fi
+		# # if source is a url
+		# elif [ "$vcs" == "$repo" ]; then
+		# 	echo "VCS is: $vcs"
+		# 	echo "URL is: $repo"
+		# 	echo "protocol is: $protocol"
+		# 	echo "Archive name is: $archivename"
+
+		# 	if [[ "$protocol" == "https" ]] || [[ "$protocol" == "http" ]]; then
+
+		# 		if [ -f $srcarchivedir/$archivename ]; then
+		# 			cp $srcarchivedir/$archivename . 
+		# 		fi
+
+		# 		if [ ! -f $archivename ]; then
+		# 			curl -Lk $repo -o  $archivename
+		# 		fi
+
+		# 		if [ ! -f $archivename ]; then
+		# 			curl -Lk $repo -o  $archivename
+		# 		fi
+
+		# 		if [ -n $provided_name ]; then
+
+		# 			mv  $archivename $provided_name
+		# 		fi
+
+		# 		echo "File to extract is: $archivename"
+		# 		extract_file $archivename
+		# 	fi
+        # else
+        #     echo "VCS is: $vcs"
+		# 	echo "URL is: $repo"
+		# 	echo "protocol is: $protocol"
+		# 	echo "Archive name is: $archivename"
+
+		# 	if [[ "$protocol" == "https" ]] || [[ "$protocol" == "http" ]]; then
+
+		# 		if [ -f $srcarchivedir/$archivename ]; then
+		# 			cp $srcarchivedir/$archivename . 
+		# 		fi
+
+		# 		if [ ! -f $archivename ]; then
+		# 			curl -Lk $repo -o  $archivename
+		# 		fi
+
+		# 		if [ ! -f $archivename ]; then
+		# 			curl -Lk $repo -o  $archivename
+		# 		fi
+
+		# 		if [ -n $provided_name ]; then
+
+		# 			mv  $archivename $provided_name
+		# 		fi
+
+		# 		echo "File to extract is: $archivename"
+		# 		extract_file $archivename
+		# 	fi
+		# fi
+		# unset all variables
+		unset $url
+		unset $outputdir
+		unset $vcs
+		unset $protocol
+		unset $filename
+		unset $repo
+		unset $clean_url
+		unset $git_checkout
+		unset $specified_directory
+		unset $extracted_directory
 		# fi
 	done
 }
@@ -1509,20 +1780,19 @@ extract_file(){
 		# 	# exit 1
 		# 	srcarchivefile="${1}"
 		# fi
-		echo "Archive to extract is: ${1}"
 		srcarchivefile="${1}"
 		#message "$(gettext "File found is : $srcarchivefile")"
 		
-		if [ ! -z $srcarchivefile ]; then
-			for file_to_extract in ${srcarchivefile[@]};do
-				# copy file to the builddir
-				message "$(gettext "File ${file_to_extract} found")"
-				cp "${file_to_extract}" .
-			done		
-		else
-			message "$(gettext "File does not exists")"
-			return 0
-		fi
+		# if [ ! -z $srcarchivefile ]; then
+		# 	for file_to_extract in ${srcarchivefile[@]};do
+		# 		# copy file to the builddir
+		# 		message "$(gettext "File ${file_to_extract} found")"
+		# 		cp "${file_to_extract}" .
+		# 	done		
+		# else
+		# 	message "$(gettext "File does not exists")"
+		# 	return 0
+		# fi
 		
 		# A temporary workaround
 		# In case more than one file found then run for loop and extract each file
@@ -1883,13 +2153,18 @@ pkginfo_xml() {
 		OLDIFS=$IFS
 		IFS=$'\n'
 
-        # find all the files in pkgdir and License file not found then filter out the first . and / with sed
-        local files=($(find  -L ${pkgdir}/ -type f -print | sed 's/^.pkg//'))
+		# remove temp from $pkgdir
+		local updated_pkgdir=${pkgdir#/tmp\/}
+
+        # find all the files in pkgdir and License file not found then filter out the first /tmp and $updated_pkgdir with sed
+        local files=($(find  -L ${pkgdir}/ -type f -print  | sed "s/\/tmp\///" | sed "s/$updated_pkgdir//"))
 
 		# restore it
 		IFS=$OLDIFS
 		# get length of an array
 		total_length=${#files[@]}
+
+		local updated_files
 		
         # insert package files into xml db
         # find total number of files in an array
@@ -1897,11 +2172,12 @@ pkginfo_xml() {
         #message "$(gettext "Total number of files to be inserted are : ${arraylength}")"
 		for file in "${files[@]}";do
 		    # local file_filtered=`echo ${file} | sed -e 's|<=| \&#8804;|g' | sed -e 's|>=| \&#8805;|g' | sed -e 's|&|\&#38;|g' | sed -e 's|+|\&#43;|g' | sed -e 's|<|\&#60;|g' | sed -e 's|>|\&#62;|g'`
-            echo "    <File>${file}</File>" >> "${pkgdir}/usr/share/avouch/pkginfo/${_pkgname}.xml"
             
-            # remove temporary directory
-            sed -i "s|$pkgdir||g" "${pkgdir}/usr/share/avouch/pkginfo/${_pkgname}.xml"
+			updated_files+="<File>${file}</File>"
         done
+
+		echo "    ${updated_files[@]}" >> "${pkgdir}/usr/share/avouch/pkginfo/${_pkgname}.xml"
+
 		# echo "  </${_pkgname}>" >> "${pkgdir}/usr/share/avouch/pkginfo/${_pkgname}.xml"
     # End of root
     echo "</Package>" >> "${pkgdir}/usr/share/avouch/pkginfo/${_pkgname}.xml"
@@ -2047,9 +2323,11 @@ pkginfo_toml() {
         # find total number of files in an array
         #local arraylength=${#files[@]}
         #message "$(gettext "Total number of files to be inserted are : ${arraylength}")"
-		for file in "${files[@]}";do
-            echo "  <Files>$file</Files>" >> "${pkgdir}/usr/share/avouch/pkginfo/${_pkgname}.xml"
+		for file in "${files[@]}";do		  
+			updated_files+="<File>${file}</File>"
         done
+
+		echo "    ${updated_files[@]}" >> "${pkgdir}/usr/share/avouch/pkginfo/${_pkgname}.xml"
 
     # End of root
     echo "</Package>" >> "${pkgdir}/usr/share/avouch/pkginfo/${_pkgname}.xml"
@@ -2519,7 +2797,7 @@ package_build(){
 
 		# use_linker "ld"
 		
-
+            add_make_flags ${1}
 			pushd "${srcdir}"
 				# run function avouch_config_guess_script() from PKGBUILD file
 				# avouch_config_guess_script
