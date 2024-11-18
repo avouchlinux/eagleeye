@@ -257,9 +257,9 @@ fi
 	pkgdir=$(mktemp -d)
 
 	## select the build directory
-	builddir="/build"
+	builddir="/home/avouch/Build"
 
-	PACKAGESDIR='/packages'
+	PACKAGESDIR='/home/avouch/Packages'
 
 	## select the build directory
 	# srcbundledir="/${builddir}/${AVHVER}/pkgbuild"
@@ -286,7 +286,7 @@ fi
 
 # fi
 
-# initialize varable
+# initialize variable
 srcdir=''
 
 # determine whether we have gettext; make it a no-op if we do not
@@ -1430,7 +1430,7 @@ get_clean_url() {
 	fi
 }
 
-get_git_checkout() {
+get_checkout() {
 	local vcs=$(get_vcs $1)
 	if [ -z $vcs ]; then		
 		return
@@ -1501,7 +1501,7 @@ getsrc(){
 		clean_url=$(get_clean_url $url)
 		# echo "Clean URL is: $clean_url"
 
-		git_checkout=$(get_git_checkout $url)
+		checkout=$(get_checkout $url)
 		# echo "Checkout is: $git_checkout"
 
 		specified_directory=$(get_specified_directory $url)
@@ -1861,20 +1861,21 @@ extract_file(){
 clean_pkgdir(){
 	
 	if [ -d "${pkgdir}" ]; then
-		pushd "${pkgdir}"
+		rm -rf "${pkgdir}"/*
+		# pushd "${pkgdir}"
 		
-			# remove all the directories in pkgdir
-			local directories=( $( ls -d * ) )
-			for dir in ${directories[@]};do
-				sudo rm -rf ${dir}
-			done
-			# remove all the files in pkgdir
-			local files=( $( ls -A ) )
-			for file in ${files[@]};do
-				sudo rm -rf ${file}
-			done
+			# # remove all the directories in pkgdir
+			# local directories=( $( ls -d * ) )
+			# for dir in ${directories[@]};do
+			# 	sudo rm -rf ${dir}
+			# done
+			# # remove all the files in pkgdir
+			# local files=( $( ls -A ) )
+			# for file in ${files[@]};do
+			# 	sudo rm -rf ${file}
+			# done
 			
-		popd			
+		# popd		
 	else 
 		
 		message "$(gettext "pkgdir directory does not exist.")"	
