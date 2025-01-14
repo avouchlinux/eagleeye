@@ -1478,12 +1478,14 @@ getsrc(){
 
     # echo ${source[@]}
 
-  	for url in ${source[@]};do
-    	
+	if [[ -n $source_x86_64 ]]; then
+		source=$source_x86_64
+	fi
+
+	for url in ${source[@]};do
 		
-		
-		local archive=''
-		local is_tar_archive=''
+		# local archive=''
+		# local is_tar_archive=''
 		
 		vcs=$(get_vcs $url)
 		# echo "VCS is: $vcs"
@@ -1556,6 +1558,7 @@ getsrc(){
 			fi			
 		fi
 
+
 		if [ -z $vcs ]; then
 			if [[ "$protocol" == "https" ]] || [[ "$protocol" == "http" ]]; then
 
@@ -1564,6 +1567,8 @@ getsrc(){
 				fi				
 				if [ ! -f $filename ]; then
 
+					echo "URL is: $clean_url"
+					echo "Filename is: $filename"
 					curl -Lk $clean_url -o  $filename
 				fi
 				# echo "File to extract is: $filename"
@@ -1592,14 +1597,14 @@ getsrc(){
 		# 		is_tar_archive=$(echo "$archive" | grep -E 'patch|diff')
 		# 		archivename=${is_tar_archive##*/}
 		# 	fi
-        #     # extract file and return
+		#     # extract file and return
 		# 	# extract_file $archivename
-        #     # return			
+		#     # return			
 		# else
-            
+			
 		# 	archivename=${url##*/}
 		# 	# echo "Archive is 2: $archivename"
-        #     # echo "File to extract is: $archivename"
+		#     # echo "File to extract is: $archivename"
 		# fi
 
 		# #   archivename=${archive%.*}
@@ -1617,7 +1622,7 @@ getsrc(){
 		# vcs=$(echo $url | sed 's/.*:://' | sed 's/+.*//')
 		# # get the repo
 		# repo=$(echo $url | sed 's/.*:://' | sed 's/.*+//'  | sed 's/?.*//' | sed 's/#.*//')
-        # # repo=$(echo $url | sed 's/.*:://' | sed 's/?.*//' | sed 's/#.*//')
+		# # repo=$(echo $url | sed 's/.*:://' | sed 's/?.*//' | sed 's/#.*//')
 		# # get if need to checkout
 		# checkout=$(echo $url | sed 's/.*#//' | sed 's/.*=//' | sed 's/?.*//')
 
@@ -1628,7 +1633,7 @@ getsrc(){
 		# # get http protocol
 		# protocol=$(echo  $url | sed 's/.*:://' | sed 's/:.*//')
 
-        
+		
 
 		# # if found any vcs
 		# if [ "$vcs" == "git" ]; then		
@@ -1683,8 +1688,8 @@ getsrc(){
 		# 		echo "File to extract is: $archivename"
 		# 		extract_file $archivename
 		# 	fi
-        # else
-        #     echo "VCS is: $vcs"
+		# else
+		#     echo "VCS is: $vcs"
 		# 	echo "URL is: $repo"
 		# 	echo "protocol is: $protocol"
 		# 	echo "Archive name is: $archivename"
@@ -1807,7 +1812,7 @@ extract_file(){
 			ext=${file##*.}	
 			
 			case "$file_type" in
-				*application/x-tar*|*application/zip*|*application/x-zip*|*application/x-cpio*)
+				*application/x-tar*|*application/zip*|*application/x-zip*|*application/x-cpio*|*application/x-AppImage*)
 					cmd="bsdtar" ;;
 				*application/x-gzip*)
 					case "$ext" in
@@ -2756,7 +2761,7 @@ package_build(){
 				# run function getsrc() from PKGBUILD file		
 				#getsrc 2>&1 | tee -a "${srcdir}/build.log"
 				getsrc	|| retval=$?
-				message "$(gettext "Retun value is : ${retval}")"
+				message "$(gettext "Function getsrc value is : ${retval}")"
 				function_status "$retval" ${1}
 				unset $retval	
 			popd
